@@ -75,17 +75,9 @@ class ProductController extends Controller
      */
     public function show(Product $product)
     {
-        try{
-            if(!empty($product)){
-                return new ProductResource($product);
-            }else{
-                throw new \Exception("Data Not Found", Response::HTTP_NO_CONTENT);
-            }
-        }catch (\Exception $ex){
-            return response([
-                'data'=>$ex->getMessage(),
-            ],Response::HTTP_BAD_REQUEST);
-        }
+
+        return new ProductResource($product);
+
     }
 
     /**
