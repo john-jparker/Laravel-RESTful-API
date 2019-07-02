@@ -6,8 +6,10 @@ use App\Http\Requests\ProductRequest;
 use App\Http\Resources\Product\ProductCollection;
 use App\Http\Resources\Product\ProductResource;
 use App\Models\Product;
+use App\Models\Review;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 
 class ProductController extends Controller
@@ -37,6 +39,7 @@ class ProductController extends Controller
     public function store(ProductRequest $request)
     {
         try{
+            DB::beginTransaction();
             $product = Product::create([
                 'product_name'=>$request->product_name,
                 'details'=>$request->details,
@@ -47,6 +50,8 @@ class ProductController extends Controller
             ]);
 
             if(!empty($product)){
+                DB::commit();
+
                 return response([
                     'data'=>new ProductResource($product)
                 ],Response::HTTP_CREATED);
@@ -54,6 +59,7 @@ class ProductController extends Controller
                 throw new \Exception('Invalid Information', 400);
             }
         }catch (\Exception $ex){
+            DB::rollBack();
             return response([
                 'data'=>$ex->getMessage(),
             ],Response::HTTP_BAD_REQUEST);
@@ -69,7 +75,17 @@ class ProductController extends Controller
      */
     public function show(Product $product)
     {
-        return new ProductResource($product);
+        try{
+            if(!empty($product)){
+                return new ProductResource($product);
+            }else{
+                throw new \Exception("Data Not Found", Response::HTTP_NO_CONTENT);
+            }
+        }catch (\Exception $ex){
+            return response([
+                'data'=>$ex->getMessage(),
+            ],Response::HTTP_BAD_REQUEST);
+        }
     }
 
     /**
@@ -79,9 +95,33 @@ class ProductController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, $id)
+    public function update(ProductRequest $request, Product $product)
     {
-        //
+        try{
+            DB::beginTransaction();
+            $product->update([
+                'product_name'=>$request->product_name,
+                'details'=>$request->details,
+                'price'=>$request->price,
+                'stock'=>$request->stock,
+                'discount'=>$request->discount,
+                'status'=>$request->status,
+            ]);
+
+            if(!empty($product)){
+                DB::commit();
+                return response([
+                    'data'=>new ProductResource($product)
+                ],Response::HTTP_OK);
+            }else{
+                throw new \Exception('Invalid Information', 400);
+            }
+        }catch (\Exception $ex){
+            DB::rollBack();
+            return response([
+                'data'=>$ex->getMessage(),
+            ],Response::HTTP_BAD_REQUEST);
+        }
     }
 
     /**
@@ -90,8 +130,20 @@ class ProductController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function destroy($id)
+    public function destroy(Product $product)
     {
-        //
+        if($product->delete()){
+
+            Review::where('product_id', $product->id)->delete();
+
+            return response([
+                'data'=>'Product Deleted'
+            ],Response::HTTP_NO_CONTENT);
+
+        }else{
+            return response([
+                'data'=>'Not Deleted',
+            ],Response::HTTP_BAD_REQUEST);
+        }
     }
 }
