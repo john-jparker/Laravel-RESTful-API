@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\ProductNotBelongsToUser;
 use App\Http\Requests\ProductRequest;
 use App\Http\Resources\Product\ProductCollection;
 use App\Http\Resources\Product\ProductResource;
@@ -89,6 +90,7 @@ class ProductController extends Controller
      */
     public function update(ProductRequest $request, Product $product)
     {
+        $this->productUserCheck($product);
         try{
             DB::beginTransaction();
             $product->update([
@@ -124,6 +126,8 @@ class ProductController extends Controller
      */
     public function destroy(Product $product)
     {
+        $this->productUserCheck($product);
+
         if($product->delete()){
 
             Review::where('product_id', $product->id)->delete();
@@ -137,5 +141,10 @@ class ProductController extends Controller
                 'data'=>'Not Deleted',
             ],Response::HTTP_BAD_REQUEST);
         }
+    }
+
+    public function productUserCheck($product){
+        if(auth()->id() !== $product->user_id)
+            throw new ProductNotBelongsToUser;
     }
 }

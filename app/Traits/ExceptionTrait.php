@@ -16,6 +16,8 @@ trait ExceptionTrait
         if($this->isHttp($ex)){
             return $this->httpResponse($ex);
         }
+
+        return parent::render($request, $ex);
     }
 
     private function isModel($ex){
